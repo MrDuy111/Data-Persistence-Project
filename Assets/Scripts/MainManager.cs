@@ -1,27 +1,44 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class MainManager : MonoBehaviour
 {
+
     public Brick BrickPrefab;
     public int LineCount = 6;
     public Rigidbody Ball;
 
+    public int bestScore;
+    public string bestPlayer;
+
     public Text ScoreText;
+    public Text TopPlayerBoardText;
+    public Text PlayerNameText;
     public GameObject GameOverText;
     
     private bool m_Started = false;
     private int m_Points;
     
     private bool m_GameOver = false;
+    public string currentPlayerName;
 
-    
+
+    private void Awake()
+    {
+        LoadBestScore();
+    }
+
     // Start is called before the first frame update
     void Start()
     {
+        
+        currentPlayerName = MenuUIHandler.Instance.getPlayerName();
+        PlayerNameText.text = currentPlayerName;
+
         const float step = 0.6f;
         int perLine = Mathf.FloorToInt(4.0f / step);
         
@@ -66,11 +83,51 @@ public class MainManager : MonoBehaviour
     {
         m_Points += point;
         ScoreText.text = $"Score : {m_Points}";
+        if(m_Points > bestScore)
+        {
+            SaveBestScore();
+            LoadBestScore();
+        }
     }
 
     public void GameOver()
     {
         m_GameOver = true;
         GameOverText.SetActive(true);
+    }
+
+    [System.Serializable]
+    public class SaveData
+    {
+        public int bestScore;
+        public string bestPlayerName;
+    }
+
+    public void SaveBestScore()
+    {
+        SaveData data = new SaveData();
+        data.bestScore = m_Points;
+        data.bestPlayerName = currentPlayerName;
+
+        string json = JsonUtility.ToJson(data);
+
+        File.WriteAllText(Application.persistentDataPath + "/savefile.json", json);
+    }
+
+    public void LoadBestScore()
+    {
+        string path = Application.persistentDataPath + "/savefile.json";
+        if (File.Exists(path))
+        {
+            string json = File.ReadAllText(path);
+            SaveData data = JsonUtility.FromJson<SaveData>(json);
+
+            bestScore = data.bestScore;
+            bestPlayer = data.bestPlayerName;
+            if(SceneManager.GetActiveScene() == SceneManager.GetSceneByName("main"))
+            {
+                TopPlayerBoardText.text = "Best Score: " + bestPlayer + ": " + bestScore;
+            }
+        }
     }
 }
